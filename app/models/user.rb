@@ -1,4 +1,5 @@
 class User < ApplicationRecord
+
   before_save { self.email.downcase! }
   validates :name, presence: true, length: { maximum: 50 }
   validates :email, presence: true, length: { maximum: 255 },
@@ -11,6 +12,11 @@ class User < ApplicationRecord
   has_many :followings, through: :relationships, source: :follow
   has_many :reverses_of_relationship, class_name: 'Relationship', foreign_key: 'follow_id'
   has_many :followers, through: :reverses_of_relationship, source: :user
+  
+  has_many :favorites
+  has_many :likings, through: :favorites, source: :micropost
+  # has_many :reverses_of_favorite, class_name: 'Favorite', foreign_key: 'micropost_id'
+  # has_many :likers, through: :reverses_of_favorite, source: :user
 
   def follow(other_user)
     unless self == other_user
@@ -26,6 +32,20 @@ class User < ApplicationRecord
   def following?(other_user)
     self.followings.include?(other_user)
   end
+  
+  def favorite(micropost)
+    self.favorites.find_or_create_by(micropost_id: micropost.id)
+  end
+  
+  def unfavorite(micropost)
+    favorite = self.favorites.find_by(micropost_id: micropost.id)
+    favorite.destroy if favorite
+  end
+  
+  def liking?(micropost)
+    self.likings.include?(micropost)   # 自分がお気に入りの中にいるかどうか/いらないメソッドかも
+  end
+  
   
   def feed_microposts
     Micropost.where(user_id: self.following_ids + [self.id])
